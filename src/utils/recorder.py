@@ -4,6 +4,7 @@ from pathlib import Path
 
 FILE_NAME = "history.md"
 
+
 class TranscriptionRecord:
     """转录记录数据类"""
 

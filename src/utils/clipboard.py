@@ -11,10 +11,6 @@ class ClipboardManager:
         self.is_windows = system == "Windows"
         self.is_linux = system == "Linux"
 
-        platform_name = (
-            "macOS" if self.is_mac else "Windows" if self.is_windows else "Linux"
-        )
-
     def copy(self, text):
         """复制文本到剪贴板
 
@@ -50,7 +46,11 @@ class ClipboardManager:
 
     def _paste_macos(self):
         try:
-            cmd = ['osascript', '-e', 'tell application "System Events" to keystroke "v" using command down']
+            cmd = [
+                "osascript",
+                "-e",
+                'tell application "System Events" to keystroke "v" using command down',
+            ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             return result.stdout.strip() if result.returncode == 0 else ""
         except Exception:
@@ -84,7 +84,6 @@ def copy_text(text):
 
 def paste_text():
     return clipboard_manager.paste()
-
 
 
 if __name__ == "__main__":

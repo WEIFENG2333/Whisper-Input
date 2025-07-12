@@ -8,6 +8,7 @@ from ..utils.clipboard import copy_text, paste_text
 from ..utils.notifications import voice_notifications
 from ..utils.recorder import transcription_recorder
 
+
 class KeyboardManager:
     def __init__(
         self,
@@ -77,25 +78,20 @@ class KeyboardManager:
             self._state = new_state
 
             # 根据状态转换发送通知
-            match new_state:
-                case InputState.RECORDING:
-                    voice_notifications.notify_recording_started(False)
-                    self.on_record_start()
-
-                case InputState.RECORDING_TRANSLATE:
-                    voice_notifications.notify_recording_started(True)
-                    self.on_translate_start()
-
-                case InputState.PROCESSING:
-                    voice_notifications.notify_processing(False)
-                    self.on_record_stop()
-
-                case InputState.TRANSLATING:
-                    voice_notifications.notify_processing(True)
-                    self.on_translate_stop()
-
-                case InputState.IDLE:
-                    pass
+            if new_state == InputState.RECORDING:
+                voice_notifications.notify_recording_started(False)
+                self.on_record_start()
+            elif new_state == InputState.RECORDING_TRANSLATE:
+                voice_notifications.notify_recording_started(True)
+                self.on_translate_start()
+            elif new_state == InputState.PROCESSING:
+                voice_notifications.notify_processing(False)
+                self.on_record_stop()
+            elif new_state == InputState.TRANSLATING:
+                voice_notifications.notify_processing(True)
+                self.on_translate_stop()
+            elif new_state == InputState.IDLE:
+                pass
 
     def show_warning(self, warning_message):
         """显示警告消息"""

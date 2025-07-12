@@ -3,13 +3,13 @@ import sys
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 from src.audio.recorder import AudioRecorder
 from src.keyboard.listener import KeyboardManager, check_accessibility_permissions
+from src.transcription.senseVoiceSmall import SenseVoiceSmallProcessor
 from src.transcription.whisper import WhisperProcessor
 from src.utils.logger import logger
-from src.transcription.senseVoiceSmall import SenseVoiceSmallProcessor
+
+load_dotenv()
 
 
 def check_microphone_permissions():
@@ -25,6 +25,7 @@ def check_microphone_permissions():
     logger.warning("\n授权后，请重新运行此程序。")
     logger.warning("===============================\n")
 
+
 class VoiceAssistant:
     def __init__(self, audio_processor):
         self.audio_recorder = AudioRecorder()
@@ -34,13 +35,13 @@ class VoiceAssistant:
             on_record_stop=self.stop_transcription_recording,
             on_translate_start=self.start_translation_recording,
             on_translate_stop=self.stop_translation_recording,
-            on_reset_state=self.reset_state
+            on_reset_state=self.reset_state,
         )
-    
+
     def start_transcription_recording(self):
         """开始录音（转录模式）"""
         self.audio_recorder.start_recording()
-    
+
     def stop_transcription_recording(self):
         """停止录音并处理（转录模式）"""
         audio = self.audio_recorder.stop_recording()
@@ -49,9 +50,7 @@ class VoiceAssistant:
             self.keyboard_manager.reset_state()
         elif audio:
             result = self.audio_processor.process_audio(
-                audio,
-                mode="transcriptions",
-                prompt=""
+                audio, mode="transcriptions", prompt=""
             )
             # 解构返回值
             text, error = result if isinstance(result, tuple) else (result, None)
@@ -59,11 +58,11 @@ class VoiceAssistant:
         else:
             logger.error("没有录音数据，状态将重置")
             self.keyboard_manager.reset_state()
-    
+
     def start_translation_recording(self):
         """开始录音（翻译模式）"""
         self.audio_recorder.start_recording()
-    
+
     def stop_translation_recording(self):
         """停止录音并处理（翻译模式）"""
         audio = self.audio_recorder.stop_recording()
@@ -72,12 +71,10 @@ class VoiceAssistant:
             self.keyboard_manager.reset_state()
         elif audio:
             result = self.audio_processor.process_audio(
-                    audio,
-                    mode="translations",
-                    prompt=""
-                )
+                audio, mode="translations", prompt=""
+            )
             text, error = result if isinstance(result, tuple) else (result, None)
-            self.keyboard_manager.type_text(text,error)
+            self.keyboard_manager.type_text(text, error)
         else:
             logger.error("没有录音数据，状态将重置")
             self.keyboard_manager.reset_state()
@@ -85,11 +82,12 @@ class VoiceAssistant:
     def reset_state(self):
         """重置状态"""
         self.keyboard_manager.reset_state()
-    
+
     def run(self):
         """运行语音助手"""
         logger.info("=== 语音助手已启动 ===")
         self.keyboard_manager.start_listening()
+
 
 def main():
     # 判断是 Whisper 还是 SiliconFlow
@@ -115,5 +113,6 @@ def main():
             logger.error(f"发生错误: {error_msg}", exc_info=True)
             sys.exit(1)
 
+
 if __name__ == "__main__":
-    main() 
+    main()
