@@ -4,7 +4,7 @@ import time
 from .inputState import InputState
 import os
 import platform
-from ..utils.clipboard import copy_text, paste_text
+from ..utils.clipboard import copy_text, paste_text, ClipboardContext
 
 
 class KeyboardManager:
@@ -203,7 +203,7 @@ class KeyboardManager:
             self.type_temp_text(text + " ✅")
 
             # 等待一小段时间确保文本已输入
-            time.sleep(0.5)
+            time.sleep(0.2)
 
             # 删除完成标记（2个字符：空格和✅）
             self.temp_text_length = 2
@@ -230,6 +230,7 @@ class KeyboardManager:
             for _ in range(self.temp_text_length):
                 self.keyboard.press(Key.backspace)
                 self.keyboard.release(Key.backspace)
+                time.sleep(0.01)
 
         self.temp_text_length = 0
 
@@ -238,17 +239,17 @@ class KeyboardManager:
         if not text:
             return
 
-        # 将文本复制到剪贴板
-        copy_text(text)
+        # 使用剪贴板上下文管理器，确保不污染原始剪贴板
+        with ClipboardContext():
+            copy_text(text)
 
-        # 模拟 Ctrl + V 粘贴文本
-        with self.keyboard.pressed(self.system_platform):
-            self.keyboard.press("v")
-            self.keyboard.release("v")
+            # 模拟 Ctrl + V 粘贴文本
+            with self.keyboard.pressed(self.system_platform):
+                self.keyboard.press("v")
+                self.keyboard.release("v")
 
         # 更新临时文本长度
         self.temp_text_length = len(text)
-
     def start_duration_check(self):
         """开始检查按键持续时间"""
         if self.is_checking_duration:

@@ -86,3 +86,24 @@ def copy_text(text):
 
 def paste_text():
     return clipboard_manager.paste()
+
+
+class ClipboardContext:
+    """剪贴板上下文管理器，确保不污染用户原始剪贴板内容"""
+
+    def __init__(self):
+        self.original_content = None
+
+    def __enter__(self):
+        self.original_content = paste_text()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.original_content is not None:
+            copy_text(self.original_content)
+        return False
+
+    def copy_and_paste(self, text):
+        """复制文本并粘贴，不污染原始剪贴板"""
+        copy_text(text)
+        return text
