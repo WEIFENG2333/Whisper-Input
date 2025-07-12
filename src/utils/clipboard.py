@@ -1,6 +1,5 @@
 import subprocess
 import platform
-from ..utils.logger import logger
 
 
 class ClipboardManager:
@@ -15,7 +14,6 @@ class ClipboardManager:
         platform_name = (
             "macOS" if self.is_mac else "Windows" if self.is_windows else "Linux"
         )
-        logger.info(f"ClipboardManager 初始化: {platform_name}")
 
     def copy(self, text):
         """复制文本到剪贴板
@@ -52,7 +50,7 @@ class ClipboardManager:
 
     def _paste_macos(self):
         try:
-            cmd = ["osascript", "-e", "get the clipboard"]
+            cmd = ['osascript', '-e', 'tell application "System Events" to keystroke "v" using command down']
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             return result.stdout.strip() if result.returncode == 0 else ""
         except Exception:
@@ -88,22 +86,8 @@ def paste_text():
     return clipboard_manager.paste()
 
 
-class ClipboardContext:
-    """剪贴板上下文管理器，确保不污染用户原始剪贴板内容"""
 
-    def __init__(self):
-        self.original_content = None
-
-    def __enter__(self):
-        self.original_content = paste_text()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.original_content is not None:
-            copy_text(self.original_content)
-        return False
-
-    def copy_and_paste(self, text):
-        """复制文本并粘贴，不污染原始剪贴板"""
-        copy_text(text)
-        return text
+if __name__ == "__main__":
+    clipboard_manager = ClipboardManager()
+    clipboard_manager.copy("Hello, World!")
+    print(clipboard_manager.paste())

@@ -4,8 +4,9 @@ import time
 from .inputState import InputState
 import os
 import platform
-from ..utils.clipboard import copy_text, paste_text, ClipboardContext
-
+from ..utils.clipboard import copy_text, paste_text
+from ..utils.notifications import voice_notifications
+from ..utils.recorder import transcription_recorder
 
 class KeyboardManager:
     def __init__(
@@ -19,17 +20,13 @@ class KeyboardManager:
         self.keyboard = Controller()
         self.option_pressed = False
         self.shift_pressed = False
-        self.temp_text_length = 0  # 用于跟踪临时文本的长度
-        self.processing_text = None  # 用于跟踪正在处理的文本
-        self.error_message = None  # 用于跟踪错误信息
-        self.warning_message = None  # 用于跟踪警告信息
         self.option_press_time = None  # 记录 Option 按下的时间戳
-        self.PRESS_DURATION_THRESHOLD = 0.5  # 按键持续时间阈值（秒）
+        self.PRESS_DURATION_THRESHOLD = 0.01  # 按键持续时间阈值（秒）
         self.is_checking_duration = False  # 用于控制定时器线程
         self.has_triggered = False  # 用于防止重复触发
         self._original_clipboard = None  # 保存原始剪贴板内容
 
-        # 回调函数
+        # 回调函数能不能查一下今天的天气怎么样？
         self.on_record_start = on_record_start
         self.on_record_stop = on_record_stop
         self.on_translate_start = on_translate_start
@@ -38,17 +35,8 @@ class KeyboardManager:
 
         # 状态管理
         self._state = InputState.IDLE
-        self._state_messages = {
-            InputState.IDLE: "",
-            InputState.RECORDING: "🎤 正在录音...",
-            InputState.RECORDING_TRANSLATE: "🎤 正在录音 (翻译模式)",
-            InputState.PROCESSING: "🔄 正在转录...",
-            InputState.TRANSLATING: "🔄 正在翻译...",
-            InputState.ERROR: lambda msg: f"{msg}",  # 错误消息使用函数动态生成
-            InputState.WARNING: lambda msg: f"⚠️ {msg}",  # 警告消息使用函数动态生成
-        }
 
-        # 自动检测系统平台
+        # 自动检测系统平台..
         system = platform.system()
         if system == "Windows":
             self.system_platform = Key.ctrl
@@ -84,84 +72,38 @@ class KeyboardManager:
 
     @state.setter
     def state(self, new_state):
-        """设置新状态并更新UI"""
+        """设置新状态并发送通知"""
         if new_state != self._state:
             self._state = new_state
 
-            # 获取状态消息
-            message = self._state_messages[new_state]
-
-            # 根据状态转换类型显示不同消息
+            # 根据状态转换发送通知
             match new_state:
                 case InputState.RECORDING:
-                    # 录音状态
-                    self.temp_text_length = 0
-                    self.type_temp_text(message)
+                    voice_notifications.notify_recording_started(False)
                     self.on_record_start()
 
                 case InputState.RECORDING_TRANSLATE:
-                    # 翻译,录音状态
-                    self.temp_text_length = 0
-                    self.type_temp_text(message)
+                    voice_notifications.notify_recording_started(True)
                     self.on_translate_start()
 
                 case InputState.PROCESSING:
-                    self._delete_previous_text()
-                    self.type_temp_text(message)
-                    self.processing_text = message
+                    voice_notifications.notify_processing(False)
                     self.on_record_stop()
 
                 case InputState.TRANSLATING:
-                    # 翻译状态
-                    self._delete_previous_text()
-                    self.type_temp_text(message)
-                    self.processing_text = message
+                    voice_notifications.notify_processing(True)
                     self.on_translate_stop()
 
-                case InputState.WARNING:
-                    # 警告状态
-                    message = message(self.warning_message)
-                    self._delete_previous_text()
-                    self.type_temp_text(message)
-                    self.warning_message = None
-                    self._schedule_message_clear()
-
-                case InputState.ERROR:
-                    # 错误状态
-                    message = message(self.error_message)
-                    self._delete_previous_text()
-                    self.type_temp_text(message)
-                    self.error_message = None
-                    self._schedule_message_clear()
-
                 case InputState.IDLE:
-                    # 空闲状态，清除所有临时文本
-                    self.processing_text = None
-
-                case _:
-                    # 其他状态
-                    self.type_temp_text(message)
-
-    def _schedule_message_clear(self):
-        """计划清除消息"""
-
-        def clear_message():
-            time.sleep(2)  # 警告消息显示2秒
-            self.state = InputState.IDLE
-
-        import threading
-
-        threading.Thread(target=clear_message, daemon=True).start()
+                    pass
 
     def show_warning(self, warning_message):
         """显示警告消息"""
-        self.warning_message = warning_message
-        self.state = InputState.WARNING
+        voice_notifications.notify_warning(warning_message)
 
     def show_error(self, error_message):
         """显示错误消息"""
-        self.error_message = error_message
-        self.state = InputState.ERROR
+        voice_notifications.notify_error(error_message)
 
     def _save_clipboard(self):
         """保存当前剪贴板内容"""
@@ -197,17 +139,10 @@ class KeyboardManager:
 
         try:
             logger.info("正在输入转录文本...")
-            self._delete_previous_text()
 
-            # 先输入文本和完成标记
-            self.type_temp_text(text + " ✅")
-
-            # 等待一小段时间确保文本已输入
-            time.sleep(0.2)
-
-            # 删除完成标记（2个字符：空格和✅）
-            self.temp_text_length = 2
-            self._delete_previous_text()
+            # 直接输入文本，不再使用临时文本
+            copy_text(text)
+            paste_text()
 
             # 将转录结果复制到剪贴板
             if os.getenv("KEEP_ORIGINAL_CLIPBOARD", "true").lower() != "true":
@@ -216,40 +151,19 @@ class KeyboardManager:
                 # 恢复原始剪贴板内容
                 self._restore_clipboard()
 
-            logger.info("文本输入完成")
+            # 发送完成通知
+            is_translation = self.state == InputState.TRANSLATING
+            voice_notifications.notify_completed(text, is_translation)
 
-            # 清理处理状态
+            # 记录转录结果
+            transcription_recorder.record(text, is_translation)
+
+            logger.info("文本输入完成")
             self.state = InputState.IDLE
         except Exception as e:
             logger.error(f"文本输入失败: {e}")
-            self.show_error(f"❌ 文本输入失败: {e}")
+            self.show_error(f"文本输入失败: {e}")
 
-    def _delete_previous_text(self):
-        """删除之前输入的临时文本"""
-        if self.temp_text_length > 0:
-            for _ in range(self.temp_text_length):
-                self.keyboard.press(Key.backspace)
-                self.keyboard.release(Key.backspace)
-                time.sleep(0.01)
-
-        self.temp_text_length = 0
-
-    def type_temp_text(self, text):
-        """输入临时状态文本"""
-        if not text:
-            return
-
-        # 使用剪贴板上下文管理器，确保不污染原始剪贴板
-        with ClipboardContext():
-            copy_text(text)
-
-            # 模拟 Ctrl + V 粘贴文本
-            with self.keyboard.pressed(self.system_platform):
-                self.keyboard.press("v")
-                self.keyboard.release("v")
-
-        # 更新临时文本长度
-        self.temp_text_length = len(text)
     def start_duration_check(self):
         """开始检查按键持续时间"""
         if self.is_checking_duration:
@@ -339,10 +253,7 @@ class KeyboardManager:
             listener.join()
 
     def reset_state(self):
-        """重置所有状态和临时文本"""
-        # 清除临时文本
-        self._delete_previous_text()
-
+        """重置所有状态"""
         # 恢复剪贴板
         self._restore_clipboard()
 
@@ -352,9 +263,6 @@ class KeyboardManager:
         self.option_press_time = None
         self.is_checking_duration = False
         self.has_triggered = False
-        self.processing_text = None
-        self.error_message = None
-        self.warning_message = None
 
         # 设置为空闲状态
         self.state = InputState.IDLE
