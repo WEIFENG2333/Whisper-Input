@@ -71,6 +71,7 @@ logs/
 *.log
 practice.md
 .cursorrules
+history.md
 
 # Audio files (temporary recordings)
 *.wav
