@@ -1,36 +1,87 @@
-# 忽略所有.env文件
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Environments
 .env
-
-# 忽略所有.pyc文件
-*.pyc
-
-# 忽略所有.pyo文件
-*.pyo
-
-# 忽略 venv 目录
+.venv
+env/
 venv/
+ENV/
+env.bak/
+venv.bak/
 
-# 忽略 .idea 目录
+# IDEs
 .vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-# 忽略 macos 的 .DS_Store 文件
+# OS specific
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# 忽略 practice.md 文件
+# Project specific
+logs/
+*.log
 practice.md
-
-# 忽略 cursorrules 文件
 .cursorrules
 
-# 忽略 logs 目录
-logs/
-app.log
+# Audio files (temporary recordings)
+*.wav
+*.mp3
+*.m4a
+*.flac
 
-# 忽略 .eggs
-.eggs/
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# 忽略 build
-build/
-
-# 忽略 dist
-dist/
+# pyenv
+.python-version
+history.md
+history.md
